@@ -1,14 +1,21 @@
-import streamlit as st
+from langchain.prompts import ChatPromptTemplate
 from langchain.document_loaders import UnstructuredFileLoader
 from langchain.text_splitter import CharacterTextSplitter
 from langchain.embeddings import OpenAIEmbeddings, CacheBackedEmbeddings
+from langchain.schema.runnable import RunnableLambda, RunnablePassthrough
 from langchain.vectorstores import FAISS
 from langchain.storage import LocalFileStore
+from langchain.chat_models import ChatOpenAI
+import streamlit as st
 
 
 st.set_page_config(
     page_title="DocumentGPT",
     page_icon="📄",
+)
+
+llm = ChatOpenAI(
+    temperature=0.1,
 )
 
 
@@ -50,6 +57,24 @@ def paint_history():
         )
 
 
+def format_docs(docs):
+    return "\n\n".join(document.page_content for document in docs)
+
+
+prompt = ChatPromptTemplate.from_messages(
+    [
+        (
+            "system",
+            """
+            Answer the question using ONLY the following context. If you don't know the answer just say you don't know. DON'T make anything up.
+            
+            Context: {context}
+            """,
+        ),
+        ("human", "{question}"),
+    ]
+)
+
 st.title("DocumentGPT")
 
 st.markdown(
@@ -76,6 +101,16 @@ if file:
     message = st.chat_input("Ask anything about your file..")
     if message:
         send_message(message, "human")
-        send_message("hey go to bed", "ai")
+        chain = (
+            {
+                "context": retriever | RunnableLambda(format_docs),
+                "question": RunnablePassthrough(),
+            }
+            | prompt
+            | llm
+        )
+        response = chain.invoke(message)
+        send_message(response.content, "ai")
+
 else:
     st.session_state["messages"] = []
