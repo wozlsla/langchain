@@ -3,17 +3,15 @@
 <br/>
 
 - **활용 패키지**  
-Langchain, GPT-4, Streamlit
-<span style="color: #808080">, Whisper, FastAPI, Streamlit, Pinecone, Hugging Face…</span>    
+Langchain, GPT-4, Streamlit, Whisper, FastAPI, Streamlit, Pinecone, Hugging Face…   
 <br/>
 
 - **AI 웹 서비스**  
-DocumentGPT
-<span style="color: #808080">, PrivateGPT, QuizGPT, SiteGPT, MeetingGPT, InvestorGPT</span>  
+DocumentGPT, PrivateGPT, QuizGPT, SiteGPT, MeetingGPT, InvestorGPT  
 <br/>
 
 - **ChatGPT 플러그인**  
-<span style="color: #808080">ChefGPT</span> 
+ChefGPT 
 
 <br/>
 <br/>
@@ -29,4 +27,4 @@ DocumentGPT 챗봇으로 AI가 문서(.txt, .pdf, .docx 등)를  읽고, 해당 
 <br/>
   
 ### 📝 Link  
-Notion : Lectures / [Fullstack GPT](https://ninth-agenda-0c7.notion.site/Fullstack-GPT-f8d49b7f3b8a4ecaa9f4ad72e3192241?pvs=4)  
+Notion : Lectures / [Fullstack GPT](https://wozlsla.com/wozlsla/Fullstack-GPT-f8d49b7f3b8a4ecaa9f4ad72e3192241 "Fullstack GPT")  
