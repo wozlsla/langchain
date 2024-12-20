@@ -27,4 +27,4 @@ DocumentGPT 챗봇으로 AI가 문서(.txt, .pdf, .docx 등)를  읽고, 해당 
 <br/>
   
 ### 📝 Link  
-Notion : Lectures / [Fullstack GPT](https://wozlsla.com/wozlsla/Fullstack-GPT-f8d49b7f3b8a4ecaa9f4ad72e3192241 "Fullstack GPT")  
+Notion : Lectures / [Fullstack GPT](https://wozlsla.notion.site/Fullstack-GPT-f8d49b7f3b8a4ecaa9f4ad72e3192241 "Fullstack GPT")  
