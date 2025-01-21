@@ -1,16 +1,17 @@
-from unittest import result
+import streamlit as st
 from langchain.document_loaders import SitemapLoader
-from langchain.schema.runnable import RunnableLambda, RunnablePassthrough
 from langchain.text_splitter import RecursiveCharacterTextSplitter
 from langchain.vectorstores.faiss import FAISS
 from langchain.embeddings import OpenAIEmbeddings, CacheBackedEmbeddings
-from langchain.chat_models import ChatOpenAI
-from langchain.prompts import ChatPromptTemplate
 from langchain.storage import LocalFileStore
+from fake_useragent import UserAgent
+from bs4 import BeautifulSoup
+from langchain.schema.runnable import RunnablePassthrough, RunnableLambda
+from langchain.prompts import ChatPromptTemplate
+from langchain.chat_models import ChatOpenAI
 
 # from langchain.callbacks import StreamingStdOutCallbackHandler
 from langchain.callbacks.base import BaseCallbackHandler
-import streamlit as st
 
 
 class ChatCallbackHandler(BaseCallbackHandler):
@@ -86,7 +87,10 @@ def get_answers(inputs):
         "answer": [
             {
                 "answer": answer_chain.invoke(
-                    {"question": question, "context": doc.page_content}
+                    {
+                        "question": question,
+                        "context": doc.page_content,
+                    }
                 ).content,
                 "source": doc.metadata["source"],
                 "date": doc.metadata["lastmod"],
@@ -143,7 +147,7 @@ def choose_answer(inputs):
     )
 
 
-def parse_page(soup):
+def parse_page(soup: BeautifulSoup):
     header = soup.find("header")
     footer = soup.find("footer")
     if header:
@@ -164,6 +168,7 @@ def load_website(url):
         chunk_size=1000,
         chunk_overlap=200,
     )
+
     loader = SitemapLoader(
         url,
         # filter_urls=[r"^(?!.*\/blog\/).*"],
@@ -174,7 +179,10 @@ def load_website(url):
         ],
         parsing_function=parse_page,
     )
+
     loader.requests_per_second = 2
+    ua = UserAgent()
+    loader.headers = {"User-Agent": ua.random}
     docs = loader.load_and_split(text_splitter=splitter)
 
     embeddings = OpenAIEmbeddings(openai_api_key=openai_api_key)
@@ -212,22 +220,20 @@ st.markdown(
 
 with st.sidebar:
     openai_api_key = st.text_input("Input your OpenAI API Key")
-    if not openai_api_key:
-        st.error("Please input your OpenAI API Key on the sidebar")
-
     url = st.text_input(
         "Write down a URL",
         placeholder="https://example.com",
         value="https://developers.cloudflare.com/sitemap.xml",
         disabled=True,
     )
-    st.markdown("---")
 
 
 if url:
     if ".xml" not in url:
         with st.sidebar:
             st.error("Please write down a Sitemap URL.")
+    if not openai_api_key:
+        st.error("Please input your OpenAI API Key on the sidebar")
     else:
         paint_history()
 
@@ -244,7 +250,9 @@ if url:
         )
 
         retriever = load_website(url)
-        query = st.text_input("Ask a question to the website.")
+
+        # query = st.text_input("Ask a question to the website.") ㅋㅋ
+        query = st.chat_input("Ask a question to the website.")
 
         if query:
             send_message(query, "human")
@@ -256,5 +264,6 @@ if url:
                 | RunnableLambda(get_answers)
                 | RunnableLambda(choose_answer)
             )
+
             with st.chat_message("ai"):
                 chain.invoke(query)
