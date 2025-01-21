@@ -3,11 +3,48 @@ from langchain.document_loaders import SitemapLoader
 from langchain.schema.runnable import RunnableLambda, RunnablePassthrough
 from langchain.text_splitter import RecursiveCharacterTextSplitter
 from langchain.vectorstores.faiss import FAISS
-from langchain.embeddings import OpenAIEmbeddings
+from langchain.embeddings import OpenAIEmbeddings, CacheBackedEmbeddings
 from langchain.chat_models import ChatOpenAI
 from langchain.prompts import ChatPromptTemplate
-from langchain.callbacks import StreamingStdOutCallbackHandler
+from langchain.storage import LocalFileStore
+
+# from langchain.callbacks import StreamingStdOutCallbackHandler
+from langchain.callbacks.base import BaseCallbackHandler
 import streamlit as st
+
+
+class ChatCallbackHandler(BaseCallbackHandler):
+    message = ""
+
+    def on_llm_start(self, *args, **kwargs):
+        self.message_box = st.empty()
+
+    def on_llm_end(self, *args, **kwargs):
+        save_message(self.message, "ai")
+
+    def on_llm_new_token(self, token, *args, **kwargs):
+        self.message += token
+        self.message_box.markdown(self.message)
+
+
+if "messages" not in st.session_state:
+    st.session_state["messages"] = []
+
+
+def save_message(message, role):
+    st.session_state["messages"].append({"message": message, "role": role})
+
+
+def send_message(message, role, save=True):
+    with st.chat_message(role):
+        st.markdown(message)
+    if save:
+        save_message(message, role)
+
+
+def paint_history():
+    for message in st.session_state["messages"]:
+        send_message(message["message"], message["role"], save=False)
 
 
 answer_prompt = ChatPromptTemplate.from_template(
@@ -43,20 +80,7 @@ def get_answers(inputs):
     docs = inputs["docs"]
     question = inputs["question"]
     answer_chain = answer_prompt | llm
-    # a = {
-    #     "question": question,
-    #     "answer": [
-    #         {
-    #             "answer": answer_chain.invoke(
-    #                 {"question": question, "context": doc.page_content}
-    #             ).content,
-    #             "source": doc.metadata["source"],
-    #             "date": doc.metadata["lastmod"],
-    #         }
-    #         for doc in docs
-    #     ],
-    # }
-    # st.write(a["answer"])
+
     return {
         "question": question,
         "answer": [
@@ -104,7 +128,8 @@ choose_prompt = ChatPromptTemplate.from_messages(
 def choose_answer(inputs):
     answers = inputs["answer"]
     question = inputs["question"]
-    choose_chain = choose_prompt | llm
+    # choose_chain = choose_prompt | llm(streaming=True) X
+    choose_chain = choose_prompt | llm_with_streaming
     condensed = "\n\n".join(
         f"{answer['answer']}\nSource:{answer['source']}\nDate:{answer['date']}\n"
         for answer in answers
@@ -151,7 +176,20 @@ def load_website(url):
     )
     loader.requests_per_second = 2
     docs = loader.load_and_split(text_splitter=splitter)
-    vector_store = FAISS.from_documents(docs, OpenAIEmbeddings())
+
+    embeddings = OpenAIEmbeddings(openai_api_key=openai_api_key)
+
+    # caching
+    url_copy = url[:]
+    cache_filename = url_copy.replace("/", "_")
+    cache_filename.strip()
+    cache_dir = LocalFileStore(f"./.cache/{cache_filename}/")
+    cached_embeddings = CacheBackedEmbeddings.from_bytes_store(
+        embeddings,
+        cache_dir,
+    )
+
+    vector_store = FAISS.from_documents(docs, cached_embeddings)
     return vector_store.as_retriever()
 
 
@@ -173,19 +211,17 @@ st.markdown(
 
 
 with st.sidebar:
-
-    llm = ChatOpenAI(
-        temperature=0.1,
-        streaming=True,
-        callbacks=[
-            StreamingStdOutCallbackHandler(),
-        ],
-    )
+    openai_api_key = st.text_input("Input your OpenAI API Key")
+    if not openai_api_key:
+        st.error("Please input your OpenAI API Key on the sidebar")
 
     url = st.text_input(
         "Write down a URL",
         placeholder="https://example.com",
+        value="https://developers.cloudflare.com/sitemap.xml",
+        disabled=True,
     )
+    st.markdown("---")
 
 
 if url:
@@ -193,10 +229,25 @@ if url:
         with st.sidebar:
             st.error("Please write down a Sitemap URL.")
     else:
+        paint_history()
+
+        llm = ChatOpenAI(
+            temperature=0.1,
+            openai_api_key=openai_api_key,
+        )
+
+        llm_with_streaming = ChatOpenAI(
+            temperature=0.1,
+            openai_api_key=openai_api_key,
+            streaming=True,
+            callbacks=[ChatCallbackHandler()],
+        )
+
         retriever = load_website(url)
         query = st.text_input("Ask a question to the website.")
 
         if query:
+            send_message(query, "human")
             chain = (
                 {
                     "docs": retriever,
@@ -205,6 +256,5 @@ if url:
                 | RunnableLambda(get_answers)
                 | RunnableLambda(choose_answer)
             )
-
-            result = chain.invoke(query)
-            st.markdown(result.content)
+            with st.chat_message("ai"):
+                chain.invoke(query)
