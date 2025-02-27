@@ -16,7 +16,7 @@ Streamlit Apps
 <br/>
 
 - **활용 패키지**  
-  Langchain, GPT-4, Streamlit, Whisper, FastAPI, Streamlit, Hugging Face(local)…  
+  Langchain, GPT-4, Streamlit, Whisper, FastAPI, Streamlit, Hugging Face(local/ollama)…  
   <br/>
 
 - **AI 웹 서비스**  
