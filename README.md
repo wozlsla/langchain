@@ -1,12 +1,11 @@
 # Langchain
 
-랭체인으로 AI 웹 서비스 제작 (진행 중)
+랭체인으로 AI 웹 서비스 제작
 
-<br/>  
+<br/>
 
-개인 작업물    
+Streamlit Apps
 
-Streamlit Apps  
 - [Document GPT](https://i5arnwzzrnsgpjj996zr8e.streamlit.app) | [Git](https://github.com/wozlsla/gpt-challenge/blob/main/app.py)
 - Private GPT
 - [Quiz GPT](https://airbnb-clone-backe-2kx7oetbv9rbpd6virxh79.streamlit.app/) | [Git](https://github.com/wozlsla/gpt-challenge-assign07)
@@ -31,30 +30,41 @@ Streamlit Apps
 ### 1. Document GPT  
 각종 문서 AI로 빠르게 파악 가능.  
 DocumentGPT 챗봇으로 AI가 문서(.txt, .pdf, .docx 등)를 읽고, 해당 문서에 관한 질문에 답변.  
-<br/>  
+<br/>
 
-### 2. Private GPT  
-비공개(개인 문서) GPT.   
-<br/>  
+### 2. Private GPT
 
-### 3. Quiz GPT  
+비공개(개인 문서) GPT.  
+<br/>
+
+### 3. Quiz GPT
+
 문서나 위키피디아 등 학습이 필요한 컨텐츠를 AI에게 학습시키면, 이를 기반으로 퀴즈를 생성해 주는 앱.  
-<br/>  
+<br/>
 
-### 4. Site GPT  
+### 4. Site GPT
+
 웹사이트를 스크랩하여 콘텐츠를 수집하고, 해당 출처를 인용하여 관련 질문에 답변하는 챗봇.  
-<br/>  
+<br/>
 
-### 5. Agents  
+### 5. Agents
+
 - 에이전트는 다음 작업을 수행
   - Wikipedia에서 검색
   - DuckDuckGo에서 검색
   - 웹사이트의 텍스트를 스크랩하고 추출
-  - 리서치 결과를 .txt 파일에 저장  
+  - 리서치 결과를 .txt 파일에 저장
+
+<br/>
+
+### 6. Meeting GPT
+
+Example Video : files/[podcast.mp4](https://www.youtube.com/watch?v=CWvOKHNeLMI "Youtube")
+
+<br/>
 
 <br/>
 <br/>
-
 
 ### Notion
 
