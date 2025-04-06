@@ -1,4 +1,4 @@
-# import os
+import os
 import math
 import glob
 import subprocess
@@ -6,8 +6,15 @@ import openai
 import streamlit as st
 from pydub import AudioSegment
 
+# for cache (dev env)
+has_transcript = os.path.exists("./.cache/podcast.txt")
 
+
+@st.cache_data()
 def transcribe_chunks(chunk_folder, destination):
+    if has_transcript:
+        return
+
     files = glob.glob(f"{chunk_folder}/*.mp3")
     files.sort()  # in-place 정렬
     # files.sort(key=lambda f: int(os.path.splitext(os.path.basename(f))[0]))
@@ -21,7 +28,11 @@ def transcribe_chunks(chunk_folder, destination):
             text_file.write(transcript["text"])
 
 
+@st.cache_data()
 def extract_audio_from_video(video_path):
+    if has_transcript:
+        return
+
     audio_path = video_path.replace("mp4", "mp3")
     command = [
         "ffmpeg",
@@ -34,7 +45,11 @@ def extract_audio_from_video(video_path):
     subprocess.run(command)
 
 
+@st.cache_data()
 def cut_audio_in_chunks(audio_path, chunks_size, chunks_folder):
+    if has_transcript:
+        return
+
     track = AudioSegment.from_mp3(audio_path)
     chunk_len = chunks_size * 60 * 1000  # milliseconds
     chunks = math.ceil(len(track) / chunk_len)
