@@ -1,18 +1,27 @@
+# Transcript
 import os
 import math
 import glob
 from pydoc import doc
 import subprocess
 from altair import Text
-import openai
+import openai  # llm (whisper)
 import streamlit as st
 from pydub import AudioSegment
 
-from langchain.chat_models import ChatOpenAI  # llm
+# Summary
+from langchain.chat_models import ChatOpenAI  # llm (gpt)
 from langchain.prompts import ChatPromptTemplate  # prompt
 from langchain.document_loaders import TextLoader
 from langchain.text_splitter import RecursiveCharacterTextSplitter
 from langchain.schema import StrOutputParser
+
+# Q&A
+from langchain.vectorstores.faiss import FAISS
+from langchain.embeddings import OpenAIEmbeddings, CacheBackedEmbeddings
+from langchain.storage import LocalFileStore
+from langchain.schema.runnable import RunnableLambda, RunnablePassthrough
+
 
 llm = ChatOpenAI(
     model="gpt-4o-mini",
@@ -21,6 +30,25 @@ llm = ChatOpenAI(
 
 # for cache (dev env)
 has_transcript = os.path.exists("./.cache/podcast.txt")
+
+splitter = RecursiveCharacterTextSplitter.from_tiktoken_encoder(
+    chunk_size=800,
+    chunk_overlap=100,
+)
+
+
+@st.cache_data()
+def embed_file(file_path):
+    cache_dir = LocalFileStore(f"./.cache/embeddings/{file.name}")
+    loader = TextLoader(file_path)
+    docs = loader.load_and_split(text_splitter=splitter)
+
+    embeddings = OpenAIEmbeddings()
+    cached_embeddings = CacheBackedEmbeddings.from_bytes_store(embeddings, cache_dir)
+
+    vectorstore = FAISS.from_documents(docs, cached_embeddings)
+    retriever = vectorstore.as_retriever()
+    return retriever
 
 
 @st.cache_data()
@@ -74,6 +102,10 @@ def cut_audio_in_chunks(audio_path, chunks_size, chunks_folder):
         chunk = track[start_time:end_time]
 
         chunk.export(f"{chunks_folder}/chunk_{i}.mp3", format="mp3")
+
+
+def format_docs(docs):
+    return "\n\n".join(doc.page_content for doc in docs)
 
 
 st.set_page_config(page_title="MeetingGPT")
@@ -133,10 +165,6 @@ if video:
 
         if start:
             loader = TextLoader(transcript_path)
-            splitter = RecursiveCharacterTextSplitter.from_tiktoken_encoder(
-                chunk_size=800,
-                chunk_overlap=100,
-            )
 
             docs = loader.load_and_split(text_splitter=splitter)
             # st.write(len(docs)) # 25 -> 줄일것
@@ -183,3 +211,38 @@ if video:
                     # st.write(summary) # 별 내용 없으면 요약이 없을 수도 있음.
             # final summary
             st.write(summary)
+
+    with qa_tab:
+        retriever = embed_file(transcript_path)
+        question = st.text_input("Do you have any questions about this video?")
+        docs = retriever.invoke(question)
+
+        # st.write(docs)
+        qa_prompt = ChatPromptTemplate.from_messages(
+            [
+                (
+                    "system",
+                    """
+                    Your job is to answer the user's question using the given context.
+                    The context is a transcript from a video.
+                    Answer the question using ONLY the following context. If you don't know the answer just say you don't know. DON'T make anything up.
+                    
+                    Context: {context}
+                    """,
+                ),
+                ("human", "{question}"),
+            ]
+        )
+
+        qa_chain = (
+            {
+                "context": retriever | RunnableLambda(format_docs),
+                "question": RunnablePassthrough(),
+            }
+            | qa_prompt
+            | llm
+            | StrOutputParser()
+        )
+
+        answer = qa_chain.invoke(question)
+        st.write(answer)
